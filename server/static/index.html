@@ -1,0 +1,144 @@
+<html>
+
+<head>
+    <title>Ruinz</title>
+    <style>
+        canvas {
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ruinz</h1>
+
+    <p>Log</p>
+    <div>
+        <ul id="log"></ul>
+    </div>
+    <canvas width=1000 height=500 id="canvas"></canvas>
+    <script>
+        let socket = new WebSocket("ws://localhost:8080/ws");
+
+        class Log {
+            constructor() {
+                this.log = document.getElementById("log");
+            }
+
+            add(message) {
+                let li = document.createElement("li");
+                li.textContent = message;
+                // if longer than 10, remove the first
+                if (this.log.children.length >= 10) {
+                    this.log.removeChild(this.log.children[0]);
+                }
+                this.log.appendChild(li);
+            }
+        }
+
+        let log = new Log();
+
+        var Keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        class Spaceship {
+            constructor(x, y, width, height, color) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+            }
+
+            draw() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        socket.onopen = function (e) {
+            log.add("[open] Connection established");
+
+            document.addEventListener('keyup', (event) => {
+                // if arrow up or W
+                if (event.keyCode == 38 || event.keyCode == 87) {
+                    Keys.up = false;
+                }
+                // if arrow down or S
+                if (event.keyCode == 40 || event.keyCode == 83) {
+                    Keys.down = false;
+                }
+                // if arrow left or A
+                if (event.keyCode == 37 || event.keyCode == 65) {
+                    Keys.left = false;
+                }
+                // if arrow right or D
+                if (event.keyCode == 39 || event.keyCode == 68) {
+                    Keys.right = false;
+                }
+                socket.send(JSON.stringify(Keys));
+                // do something
+            }, false);
+
+            document.addEventListener("keydown", (event) => {
+                // if arrow up or W
+                if (event.keyCode == 38 || event.keyCode == 87) {
+                    Keys.up = true;
+                }
+                // if arrow down or S
+                if (event.keyCode == 40 || event.keyCode == 83) {
+                    Keys.down = true;
+                }
+                // if arrow left or A
+                if (event.keyCode == 37 || event.keyCode == 65) {
+                    Keys.left = true;
+                }
+                // if arrow right or D
+                if (event.keyCode == 39 || event.keyCode == 68) {
+                    Keys.right = true;
+                }
+
+                socket.send(JSON.stringify(Keys));
+                // do something
+            });
+        };
+
+        socket.onmessage = function (event) {
+            let message = JSON.parse(event.data);
+            if (message.type == 'state') {
+                // draw the state
+                // clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                message.data.spaceships.forEach(spaceship => {
+                    var spaceship = new Spaceship(spaceship.position.x, spaceship.position.y, 100, 100, 'white');
+                    spaceship.draw();
+                });
+            }
+
+            log.add(`[message]: ${event.data}`);
+        };
+
+        socket.onclose = function (event) {
+            if (event.wasClean) {
+                log.add(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+            } else {
+                // e.g. server process killed or network down
+                // event.code is usually 1006 in this case
+                log.add('[close] Connection died');
+            }
+        };
+
+
+        socket.onerror = function (error) {
+            alert(`[error]`);
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,3 @@
+Connect user to server
+Create a spaceship in world
+Use WASD keys to move spaceship
